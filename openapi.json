@@ -4,6 +4,10 @@
     "title": "ZapSMTP API",
     "version": "1",
     "description": "Send, receive and track email. Docs: https://zapsmtp.com/docs/",
+    "contact": {
+      "name": "ZapSMTP",
+      "url": "https://zapsmtp.com/"
+    },
     "license": {
       "name": "MIT",
       "identifier": "MIT"
@@ -122,6 +126,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "domain_not_verified: sender domain is not verified for this account\nrestricted_api_key: key restricted to another domain or stream\naccount_suspended: account is suspended",
             "content": {
@@ -173,7 +180,7 @@
             }
           },
           "429": {
-            "description": "rate_limit_exceeded: rate limit exceeded\nmonthly_quota_exceeded: monthly quota exceeded\ndaily_quota_exceeded: daily sending limit reached; it resets at 00:00 UTC\noverloaded: server at capacity (\"the server is at capacity; retry shortly\", Retry-After: 1) or event pipeline backed up (\"the event pipeline is backed up; retry shortly\", Retry-After: 5); nothing sent, retry",
+            "description": "rate_limit_exceeded: too many failed authentications from this address; retry in a minute\nrate_limit_exceeded: rate limit exceeded\nmonthly_quota_exceeded: monthly quota exceeded\ndaily_quota_exceeded: daily sending limit reached; it resets at 00:00 UTC\noverloaded: server at capacity (\"the server is at capacity; retry shortly\", Retry-After: 1) or event pipeline backed up (\"the event pipeline is backed up; retry shortly\", Retry-After: 5); nothing sent, retry",
             "content": {
               "application/json": {
                 "schema": {
@@ -244,10 +251,12 @@
             "name": "limit",
             "in": "query",
             "required": false,
-            "description": "1-100; out-of-range values fall back to 20.",
+            "description": "1-100. Limits: 422 invalid_parameter otherwise.",
             "schema": {
               "type": "integer",
-              "default": "20"
+              "default": 20,
+              "minimum": 1,
+              "maximum": 100
             }
           },
           {
@@ -256,7 +265,15 @@
             "required": false,
             "description": "Cursor: an email id (UUIDv7) or RFC 3339 time; returns emails accepted before it. An email id gives an exact page boundary. Limits: 422 invalid_parameter \"before must be an email id or RFC 3339 time\"",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "anyOf": [
+                {
+                  "format": "uuid"
+                },
+                {
+                  "format": "date-time"
+                }
+              ]
             }
           },
           {
@@ -265,14 +282,22 @@
             "required": false,
             "description": "Email id or RFC 3339 time; only emails created after it (still newest first). Limits: 422 invalid_parameter \"after must be an email id or RFC 3339 time\"",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "anyOf": [
+                {
+                  "format": "uuid"
+                },
+                {
+                  "format": "date-time"
+                }
+              ]
             }
           },
           {
             "name": "status",
             "in": "query",
             "required": false,
-            "description": "Filter by latest status. status=scheduled lists pending scheduled sends instead (different item shape, ordered by scheduled time ascending, has_more always false, other filters/cursors ignored).",
+            "description": "Filter by latest status. status=scheduled lists pending scheduled sends instead (different item shape, ordered by scheduled time ascending, has_more always false, other filters/cursors ignored, though they must be valid).",
             "schema": {
               "type": "string",
               "enum": [
@@ -303,10 +328,12 @@
             "name": "days",
             "in": "query",
             "required": false,
-            "description": "Look-back window in days, 1-90 (other values ignored). Always capped by the plan's log retention.",
+            "description": "Look-back window in days, 1-90. Always capped by the plan's log retention. Limits: 422 invalid_parameter otherwise.",
             "schema": {
               "type": "integer",
-              "default": "30"
+              "default": 30,
+              "minimum": 1,
+              "maximum": 90
             }
           },
           {
@@ -326,7 +353,7 @@
             "name": "mode",
             "in": "query",
             "required": false,
-            "description": "Filter live or test-mode (sandbox) traffic; other values ignored.",
+            "description": "Filter live or test-mode (sandbox) traffic. Limits: 422 invalid_parameter for other values.",
             "schema": {
               "type": "string",
               "enum": [
@@ -393,6 +420,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -412,6 +442,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -474,6 +507,9 @@
                       "id": "019a1f2e-7c3c-7a10-8b21-4d5e6f7a8b9c",
                       "suppressed": [
                         "old@example.org"
+                      ],
+                      "failed_recipients": [
+                        "typo@exmaple.org"
                       ]
                     }
                   ],
@@ -497,6 +533,9 @@
                 }
               }
             }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
           },
           "409": {
             "description": "idempotency_key_reused: \nidempotency_request_in_progress: ",
@@ -527,6 +566,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "503": {
             "description": "service_unavailable: too many large bodies in flight",
@@ -657,6 +699,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -676,6 +721,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -732,6 +780,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: this API key cannot manage this email (another domain or stream, or live mail with a test key)",
             "content": {
@@ -752,6 +803,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "422": {
             "description": "missing_required_field: \ninvalid_parameter: ",
             "content": {
@@ -761,6 +815,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -782,12 +839,14 @@
                 "properties": {
                   "scheduled_at": {
                     "type": "string",
-                    "description": "RFC 3339 or \"in <n> <unit>\" (see POST /emails). A time in the past dispatches as soon as possible. Limits: missing → 422 missing_required_field; unparsable or > 7 days ahead → 422 invalid_parameter"
+                    "description": "RFC 3339 or \"in <n> <unit>\" (see POST /emails). A time in the past dispatches as soon as possible. Limits: missing → 422 missing_required_field; unparsable or > 7 days ahead → 422 invalid_parameter",
+                    "minLength": 1
                   }
                 },
                 "required": [
                   "scheduled_at"
-                ]
+                ],
+                "additionalProperties": false
               },
               "example": {
                 "scheduled_at": "in 2 hours"
@@ -843,6 +902,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -854,7 +916,7 @@
             }
           },
           "404": {
-            "description": "not_found: content not available (past your plan's log retention)",
+            "description": "not_found: content not available yet (it can take a few seconds to appear after the send) or past your plan's log retention",
             "content": {
               "application/json": {
                 "schema": {
@@ -862,6 +924,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -912,6 +977,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: this API key cannot manage this email (another domain or stream, or live mail with a test key)",
             "content": {
@@ -931,6 +999,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -1008,6 +1079,12 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "422": {
             "description": "missing_required_field: \ninvalid_parameter: ",
             "content": {
@@ -1019,7 +1096,7 @@
             }
           },
           "429": {
-            "description": "rate_limit_exceeded: spam checks are limited to 30 per minute",
+            "description": "rate_limit_exceeded: too many failed authentications from this address; retry in a minute\nrate_limit_exceeded: spam checks are limited to 30 per minute",
             "content": {
               "application/json": {
                 "schema": {
@@ -1058,7 +1135,8 @@
                 "properties": {
                   "from": {
                     "type": "string",
-                    "description": "From address; when its domain is verified by the account the draft is DKIM-signed with the real key."
+                    "description": "From address; when its domain is verified by the account the draft is DKIM-signed with the real key.",
+                    "minLength": 1
                   },
                   "to": {
                     "oneOf": [
@@ -1091,7 +1169,8 @@
                 },
                 "required": [
                   "from"
-                ]
+                ],
+                "additionalProperties": false
               },
               "example": {
                 "from": "Acme <hello@acme.com>",
@@ -1172,6 +1251,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -1193,7 +1275,7 @@
             }
           },
           "429": {
-            "description": "rate_limit_exceeded: ",
+            "description": "rate_limit_exceeded: too many failed authentications from this address; retry in a minute\nrate_limit_exceeded: ",
             "content": {
               "application/json": {
                 "schema": {
@@ -1282,6 +1364,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "404": {
             "description": "not_found: Unknown email, or past your plan’s log retention.",
             "content": {
@@ -1291,6 +1376,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -1356,6 +1444,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "404": {
             "description": "not_found: Unknown email or attachment.",
             "content": {
@@ -1365,6 +1456,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -1416,6 +1510,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "test_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -1436,6 +1533,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "422": {
             "description": "invalid_parameter: expires_in_hours out of range.",
             "content": {
@@ -1445,6 +1545,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -1468,7 +1571,8 @@
                     "type": "integer",
                     "description": "1–720."
                   }
-                }
+                },
+                "additionalProperties": false
               },
               "example": {
                 "expires_in_hours": 72
@@ -1560,6 +1664,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -1569,6 +1676,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -1648,6 +1758,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "plan_limit_reached: the <Plan> plan includes <n> domains; upgrade your plan to add more\nrestricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -1668,6 +1781,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "422": {
             "description": "invalid_parameter: invalid domain name",
             "content": {
@@ -1677,6 +1793,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -1698,12 +1817,14 @@
                 "properties": {
                   "name": {
                     "type": "string",
-                    "description": "Domain name (lowercased, trailing dot removed). Limits: valid hostname <=253 chars, else 422 invalid_parameter \"invalid domain name\""
+                    "description": "Domain name (lowercased, trailing dot removed). Limits: valid hostname <=253 chars, else 422 invalid_parameter \"invalid domain name\"",
+                    "minLength": 1
                   }
                 },
                 "required": [
                   "name"
-                ]
+                ],
+                "additionalProperties": false
               },
               "example": {
                 "name": "mail.acme.com"
@@ -1744,6 +1865,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -1763,6 +1887,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -1853,6 +1980,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -1873,6 +2003,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "422": {
             "description": "invalid_parameter: bad tls; reply_domain not one of your inbound domains, not this domain or a subdomain of it, or without a verified MX record; reply_forward_to not a plain address, a receiving address, or not on a verified domain / confirmed forward destination; reply_tracking without a reply_domain",
             "content": {
@@ -1882,6 +2015,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -1895,7 +2031,7 @@
           }
         },
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -1925,7 +2061,8 @@
                     "type": "string",
                     "description": "Where replies a person wrote are forwarded: a plain address on one of your verified domains, or a confirmed forward destination; never a receiving address. \"\" (default) forwards to the email’s first Reply-To, else its From. Limits: otherwise 422 invalid_parameter"
                   }
-                }
+                },
+                "additionalProperties": false
               },
               "example": {
                 "open_tracking": true,
@@ -1960,6 +2097,9 @@
           "204": {
             "description": "No content"
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -1979,6 +2119,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -2079,6 +2222,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -2108,6 +2254,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -2219,6 +2368,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -2238,6 +2390,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -2275,10 +2430,12 @@
             "name": "days",
             "in": "query",
             "required": false,
-            "description": "1-180; out-of-range falls back to 30.",
+            "description": "1-180. Limits: 422 invalid_parameter otherwise.",
             "schema": {
               "type": "integer",
-              "default": "30"
+              "default": 30,
+              "minimum": 1,
+              "maximum": 180
             }
           }
         ],
@@ -2366,6 +2523,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -2385,6 +2545,19 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "invalid_parameter: a query parameter is out of range or not one of its values",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -2430,6 +2603,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -2451,7 +2627,7 @@
             }
           },
           "429": {
-            "description": "rate_limit_exceeded: this domain was checked less than a minute ago",
+            "description": "rate_limit_exceeded: too many failed authentications from this address; retry in a minute\nrate_limit_exceeded: this domain was checked less than a minute ago",
             "content": {
               "application/json": {
                 "schema": {
@@ -2579,6 +2755,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -2598,6 +2777,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -2641,6 +2823,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -2661,6 +2846,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "422": {
             "description": "invalid_certificate: \ninvalid_logo: \ninvalid_parameter: ",
             "content": {
@@ -2670,6 +2858,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -2683,7 +2874,7 @@
           }
         },
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -2707,7 +2898,8 @@
                   "remove_cert": {
                     "type": "boolean"
                   }
-                }
+                },
+                "additionalProperties": false
               },
               "example": {
                 "from_name": "Acme"
@@ -2764,6 +2956,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -2773,6 +2968,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -2823,6 +3021,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -2833,6 +3034,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "422": {
             "description": "invalid_parameter: ",
             "content": {
@@ -2842,6 +3046,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -2863,7 +3070,8 @@
                 "properties": {
                   "url": {
                     "type": "string",
-                    "description": "Absolute https:// URL. Limits: 422 invalid_parameter \"url must be an absolute https:// URL\""
+                    "description": "Absolute https:// URL. Limits: 422 invalid_parameter \"url must be an absolute https:// URL\"",
+                    "minLength": 1
                   },
                   "events": {
                     "type": "array",
@@ -2891,7 +3099,8 @@
                 },
                 "required": [
                   "url"
-                ]
+                ],
+                "additionalProperties": false
               },
               "example": {
                 "url": "https://acme.com/hooks/zapsmtp",
@@ -2954,6 +3163,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -2973,6 +3185,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -3029,6 +3244,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -3049,6 +3267,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "422": {
             "description": "invalid_parameter: ",
             "content": {
@@ -3058,6 +3279,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -3071,7 +3295,7 @@
           }
         },
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -3108,7 +3332,8 @@
                     ],
                     "description": "Narrows email.clicked to some click actions; other event types are not affected. Empty or absent: every click. Replaces the whole filter; {\"actions\": []} removes it."
                   }
-                }
+                },
+                "additionalProperties": false
               },
               "example": {
                 "enabled": true
@@ -3140,6 +3365,9 @@
           "204": {
             "description": "No content"
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -3159,6 +3387,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -3245,6 +3476,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -3265,6 +3499,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "422": {
             "description": "invalid_parameter: ",
             "content": {
@@ -3274,6 +3511,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -3312,7 +3552,8 @@
                     ],
                     "description": "Limits: 422 invalid_parameter \"unknown event type\""
                   }
-                }
+                },
+                "additionalProperties": false
               },
               "example": {
                 "type": "email.delivered"
@@ -3386,6 +3627,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -3405,6 +3649,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -3475,6 +3722,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "404": {
             "description": "not_found: Unknown webhook.",
             "content": {
@@ -3484,6 +3734,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -3572,6 +3825,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "404": {
             "description": "not_found: Unknown webhook, or the event is not among the last 100 attempts.",
             "content": {
@@ -3581,6 +3837,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -3655,6 +3914,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -3674,6 +3936,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -3725,6 +3990,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -3744,6 +4012,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -3823,6 +4094,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -3832,6 +4106,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -3878,6 +4155,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -3898,6 +4178,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "422": {
             "description": "invalid_parameter: bad name or description",
             "content": {
@@ -3907,6 +4190,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -3928,7 +4214,8 @@
                 "properties": {
                   "name": {
                     "type": "string",
-                    "description": "The name links carry in data-zap-action: lowercase letters, digits, _, . and -, starting with a letter or digit, up to 64 characters. Limits: other names → 422 invalid_parameter"
+                    "description": "The name links carry in data-zap-action: lowercase letters, digits, _, . and -, starting with a letter or digit, up to 64 characters. Limits: other names → 422 invalid_parameter",
+                    "minLength": 1
                   },
                   "description": {
                     "type": "string",
@@ -3937,7 +4224,8 @@
                 },
                 "required": [
                   "name"
-                ]
+                ],
+                "additionalProperties": false
               },
               "example": {
                 "name": "confirm_order",
@@ -3995,6 +4283,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -4014,6 +4305,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -4071,6 +4365,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -4091,6 +4388,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "422": {
             "description": "invalid_parameter: description: at most 500 bytes",
             "content": {
@@ -4100,6 +4400,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -4113,7 +4416,7 @@
           }
         },
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -4123,7 +4426,8 @@
                     "type": "string",
                     "description": "The new description; leaving it out sets it to empty. Limits: at most 500 bytes → 422 invalid_parameter"
                   }
-                }
+                },
+                "additionalProperties": false
               },
               "example": {
                 "description": "Customer confirms an order from the receipt email"
@@ -4167,6 +4471,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -4186,6 +4493,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -4256,6 +4566,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -4265,6 +4578,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -4338,6 +4654,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -4378,6 +4697,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
           "default": {
             "description": "Error",
             "content": {
@@ -4398,7 +4720,8 @@
                 "properties": {
                   "name": {
                     "type": "string",
-                    "description": "Limits: trimmed, 1-200 characters → 422 missing_required_field \"name is required (max 200 chars)\""
+                    "description": "Limits: trimmed, 1-200 characters → 422 missing_required_field \"name is required (max 200 chars)\"",
+                    "minLength": 1
                   },
                   "alias": {
                     "type": "string",
@@ -4441,7 +4764,8 @@
                 },
                 "required": [
                   "name"
-                ]
+                ],
+                "additionalProperties": false
               },
               "example": {
                 "name": "Welcome",
@@ -4549,6 +4873,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -4568,6 +4895,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -4610,6 +4940,9 @@
                 }
               }
             }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
@@ -4661,6 +4994,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
           "default": {
             "description": "Error",
             "content": {
@@ -4673,7 +5009,7 @@
           }
         },
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -4721,7 +5057,8 @@
                     "type": "boolean",
                     "description": "Publish the result in the same call. Without it the template stays a draft and is not used for sending until published."
                   }
-                }
+                },
+                "additionalProperties": false
               },
               "example": {
                 "subject": "Welcome aboard, {{first_name}}"
@@ -4765,6 +5102,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -4784,6 +5124,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -4853,6 +5196,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "test_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -4872,6 +5218,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -4927,6 +5276,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "test_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -4946,6 +5298,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -5002,6 +5357,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -5022,6 +5380,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "422": {
             "description": "template_render_error: ",
             "content": {
@@ -5031,6 +5392,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -5055,7 +5419,8 @@
                     "additionalProperties": {},
                     "description": "Variables to render with; when omitted the template's stored sample variables are used."
                   }
-                }
+                },
+                "additionalProperties": false
               },
               "example": {
                 "variables": {
@@ -5100,6 +5465,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -5110,6 +5478,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "422": {
             "description": "template_render_error: <field>: <syntax error>",
             "content": {
@@ -5119,6 +5490,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -5132,7 +5506,7 @@
           }
         },
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -5151,7 +5525,8 @@
                     "type": "object",
                     "additionalProperties": {}
                   }
-                }
+                },
+                "additionalProperties": false
               },
               "example": {
                 "subject": "Hi {{first_name}}",
@@ -5227,6 +5602,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -5246,6 +5624,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -5311,6 +5692,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -5330,6 +5714,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -5413,6 +5800,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -5432,6 +5822,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -5550,6 +5943,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -5559,6 +5955,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -5615,6 +6014,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -5625,6 +6027,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "422": {
             "description": "invalid_parameter: bad key, value over 10 KB or description over 500 bytes",
             "content": {
@@ -5634,6 +6039,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -5647,7 +6055,7 @@
           }
         },
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -5661,7 +6069,8 @@
                     "type": "string",
                     "description": "What it is for. Limits: at most 500 bytes → 422 invalid_parameter"
                   }
-                }
+                },
+                "additionalProperties": false
               },
               "example": {
                 "value": "Acme Inc.",
@@ -5706,6 +6115,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -5725,6 +6137,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -5801,6 +6216,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -5810,6 +6228,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -5869,6 +6290,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -5899,6 +6323,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
           "default": {
             "description": "Error",
             "content": {
@@ -5919,7 +6346,8 @@
                 "properties": {
                   "name": {
                     "type": "string",
-                    "description": "Limits: trimmed, 1-200 characters → 422 missing_required_field"
+                    "description": "Limits: trimmed, 1-200 characters → 422 missing_required_field",
+                    "minLength": 1
                   },
                   "category": {
                     "type": "string",
@@ -5932,7 +6360,8 @@
                 "required": [
                   "name",
                   "design"
-                ]
+                ],
+                "additionalProperties": false
               },
               "example": {
                 "name": "Footer",
@@ -6021,6 +6450,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -6040,6 +6472,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -6110,6 +6545,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -6150,6 +6588,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
           "default": {
             "description": "Error",
             "content": {
@@ -6162,7 +6603,7 @@
           }
         },
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -6179,7 +6620,8 @@
                   "design": {
                     "description": "The saved rows: {\"rows\": [...]} with at least one row in the visual editor’s format (copy rows from a template’s design). Limits: max 1 MB → 422 invalid_parameter"
                   }
-                }
+                },
+                "additionalProperties": false
               },
               "example": {
                 "category": "Footers"
@@ -6223,6 +6665,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -6242,6 +6687,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -6303,6 +6751,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -6312,6 +6763,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -6356,6 +6810,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -6385,6 +6842,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "503": {
             "description": "storage_unavailable: object storage is not configured",
@@ -6416,7 +6876,8 @@
                 "properties": {
                   "url": {
                     "type": "string",
-                    "description": "JSON upload: an http(s) URL we download the image from (private and internal addresses are refused). Limits: unreachable, not HTTP 200 or not a URL → 422 invalid_parameter"
+                    "description": "JSON upload: an http(s) URL we download the image from (private and internal addresses are refused). Limits: unreachable, not HTTP 200 or not a URL → 422 invalid_parameter",
+                    "minLength": 1
                   },
                   "name": {
                     "type": "string",
@@ -6425,7 +6886,8 @@
                 },
                 "required": [
                   "url"
-                ]
+                ],
+                "additionalProperties": false
               },
               "example": {
                 "url": "https://acme.com/brand/logo.png",
@@ -6489,6 +6951,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -6508,6 +6973,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -6556,6 +7024,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -6566,6 +7037,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "422": {
             "description": "invalid_parameter: see the fields",
             "content": {
@@ -6575,6 +7049,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -6596,7 +7073,8 @@
                 "properties": {
                   "end": {
                     "type": "string",
-                    "description": "When the countdown reaches zero. Limits: missing → 422 invalid_parameter \"end is required\"; not RFC 3339 → 400 validation_error"
+                    "description": "When the countdown reaches zero. Limits: missing → 422 invalid_parameter \"end is required\"; not RFC 3339 → 400 validation_error",
+                    "minLength": 1
                   },
                   "width": {
                     "type": "integer",
@@ -6604,15 +7082,18 @@
                   },
                   "digit_color": {
                     "type": "string",
-                    "description": "Digit colour, hex RRGGBB or RRGGBBAA (a leading # is allowed). Limits: otherwise 422 invalid_parameter \"fg: colour must be RRGGBB or RRGGBBAA\""
+                    "description": "Digit colour, hex RRGGBB or RRGGBBAA (a leading # is allowed). Limits: otherwise 422 invalid_parameter \"fg: colour must be RRGGBB or RRGGBBAA\"",
+                    "minLength": 1
                   },
                   "label_color": {
                     "type": "string",
-                    "description": "Label colour, same format. Limits: 422 invalid_parameter \"lc: …\""
+                    "description": "Label colour, same format. Limits: 422 invalid_parameter \"lc: …\"",
+                    "minLength": 1
                   },
                   "background": {
                     "type": "string",
-                    "description": "Background colour, same format; alpha 00 (e.g. ffffff00) is transparent. Limits: 422 invalid_parameter \"bg: …\""
+                    "description": "Background colour, same format; alpha 00 (e.g. ffffff00) is transparent. Limits: 422 invalid_parameter \"bg: …\"",
+                    "minLength": 1
                   },
                   "labels": {
                     "type": "array",
@@ -6627,7 +7108,8 @@
                   "digit_color",
                   "label_color",
                   "background"
-                ]
+                ],
+                "additionalProperties": false
               },
               "example": {
                 "end": "2026-11-28T23:59:59Z",
@@ -6654,10 +7136,12 @@
             "name": "limit",
             "in": "query",
             "required": false,
-            "description": "1-100; out-of-range falls back to 20.",
+            "description": "1-100. Limits: 422 invalid_parameter otherwise.",
             "schema": {
               "type": "integer",
-              "default": "20"
+              "default": 20,
+              "minimum": 1,
+              "maximum": 100
             }
           },
           {
@@ -6666,7 +7150,15 @@
             "required": false,
             "description": "Cursor: an email id or RFC 3339 time; returns messages received before it. An email id gives an exact page boundary. Limits: 422 invalid_parameter \"before must be an email id or RFC 3339 time\"",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "anyOf": [
+                {
+                  "format": "uuid"
+                },
+                {
+                  "format": "date-time"
+                }
+              ]
             }
           },
           {
@@ -6675,7 +7167,15 @@
             "required": false,
             "description": "Email id or RFC 3339 time. Limits: 422 invalid_parameter \"after must be an email id or RFC 3339 time\"",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "anyOf": [
+                {
+                  "format": "uuid"
+                },
+                {
+                  "format": "date-time"
+                }
+              ]
             }
           },
           {
@@ -6715,7 +7215,8 @@
             "required": false,
             "description": "Only emails of this conversation (see GET /threads/{id}).",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           },
           {
@@ -6724,7 +7225,16 @@
             "required": false,
             "description": "false: only emails a person wrote; true: only automated ones; or one type: bounce, out_of_office, auto_reply, auto_generated, bulk. Limits: 422 invalid_parameter for other values.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "true",
+                "false",
+                "bounce",
+                "out_of_office",
+                "auto_reply",
+                "auto_generated",
+                "bulk"
+              ]
             }
           }
         ],
@@ -6788,6 +7298,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -6807,6 +7320,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "503": {
             "description": "inbound_not_configured: inbound email is not enabled on this deployment",
@@ -6835,7 +7351,7 @@
       "get": {
         "operationId": "get-received",
         "summary": "Retrieve a received email",
-        "description": "Retrieve a received email with bodies, headers, authentication results and download links. Requires a full-access key. automated is null for mail a person wrote, else {type, reason}: bounce (delivery status notification), out_of_office, auto_reply, auto_generated (notifications, null sender) or bulk (mailing lists). Detected from Auto-Submitted, X-Autoreply, Precedence, List-Id, multipart/report and well-known subjects; reason names the evidence. tls: the TLS version the sending server used (e.g. TLSv1_3); empty when the message was not encrypted.",
+        "description": "Retrieve a received email with bodies, headers, authentication results and download links. Requires a full-access key. automated is null for mail a person wrote, else {type, reason}: bounce (delivery status notification), out_of_office, auto_reply, auto_generated (notifications, null sender) or bulk (mailing lists). Detected from Auto-Submitted, X-Autoreply, Precedence, List-Id, multipart/report and well-known subjects; reason names the evidence. tls: the TLS version the sending server used (e.g. TLSv1_3); empty when the message was not encrypted. A message refused at SMTP (status: rejected: spam or a reject route) is listed but its content was never kept: it returns the listing fields, with html, text and raw null and headers empty. Its attachments, redelivery, spam reports and replies are 404; DELETE erases it.",
         "tags": [
           "Received emails"
         ],
@@ -6943,6 +7459,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -6962,6 +7481,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "503": {
             "description": "inbound_not_configured: ",
@@ -7020,6 +7542,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -7049,6 +7574,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "503": {
             "description": "inbound_not_configured: ",
@@ -7096,9 +7624,11 @@
             "name": "limit",
             "in": "query",
             "required": false,
-            "description": "1-100; when omitted or out of range all attachments are returned.",
+            "description": "1-100; when omitted all attachments are returned. Limits: 422 invalid_parameter otherwise.",
             "schema": {
-              "type": "integer"
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
             }
           },
           {
@@ -7157,6 +7687,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -7176,6 +7709,19 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "invalid_parameter: a query parameter is out of range or not one of its values",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "503": {
             "description": "inbound_not_configured: ",
@@ -7251,6 +7797,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -7270,6 +7819,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "503": {
             "description": "inbound_not_configured: ",
@@ -7330,6 +7882,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -7349,6 +7904,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "503": {
             "description": "inbound_not_configured: ",
@@ -7410,6 +7968,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -7429,6 +7990,12 @@
                 }
               }
             }
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "503": {
             "description": "service_unavailable: The spam filter could not learn right now; retry.",
@@ -7465,7 +8032,8 @@
                 },
                 "required": [
                   "spam"
-                ]
+                ],
+                "additionalProperties": false
               },
               "example": {
                 "spam": true
@@ -7529,6 +8097,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "domain_not_verified: sender domain is not verified for this account\nrestricted_api_key: ",
             "content": {
@@ -7559,6 +8130,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "422": {
             "description": "missing_required_field: from (managed receiving address), to (no sender on the email), or the body\nautomated_message: the email is a bounce, out-of-office, auto-reply or notification; pass allow_automated: true",
             "content": {
@@ -7570,7 +8144,7 @@
             }
           },
           "429": {
-            "description": "rate_limit_exceeded: \nthread_reply_limit: too many replies in this conversation in the last hour (a mail loop?); at most 20 per hour; Retry-After: 3600",
+            "description": "rate_limit_exceeded: too many failed authentications from this address; retry in a minute\nrate_limit_exceeded: \nthread_reply_limit: too many replies in this conversation in the last hour (a mail loop?); at most 20 per hour; Retry-After: 3600",
             "content": {
               "application/json": {
                 "schema": {
@@ -7601,7 +8175,7 @@
           }
         },
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -7747,7 +8321,8 @@
                     "type": "string",
                     "description": "RFC 3339 time (e.g. 2026-10-21T15:00:00Z) or relative \"in <n> <unit>\" with unit min|mins|minute|minutes|h|hour|hours|d|day|days. Times in the past send immediately. Limits: unparsable → 422 invalid_parameter; more than 7 days ahead → 422 invalid_parameter \"scheduled_at must be within 7 days\""
                   }
-                }
+                },
+                "additionalProperties": false
               },
               "example": {
                 "text": "Thanks, it ships today."
@@ -7771,10 +8346,12 @@
             "name": "limit",
             "in": "query",
             "required": false,
-            "description": "1-100; out-of-range falls back to 20.",
+            "description": "1-100. Limits: 422 invalid_parameter otherwise.",
             "schema": {
               "type": "integer",
-              "default": "20"
+              "default": 20,
+              "minimum": 1,
+              "maximum": 100
             }
           },
           {
@@ -7783,7 +8360,8 @@
             "required": false,
             "description": "Cursor: the last_message_at of the last conversation you have (RFC 3339). Limits: 422 invalid_parameter otherwise.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "date-time"
             }
           },
           {
@@ -7792,14 +8370,15 @@
             "required": false,
             "description": "With before: the id of the last conversation you have, so conversations active at the same instant are neither skipped nor repeated.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           },
           {
             "name": "awaiting_reply",
             "in": "query",
             "required": false,
-            "description": "true: only conversations whose last human email came in.",
+            "description": "true: only conversations whose last human email came in. Limits: 422 invalid_parameter unless true or false.",
             "schema": {
               "type": "boolean"
             }
@@ -7808,7 +8387,7 @@
             "name": "unread",
             "in": "query",
             "required": false,
-            "description": "true: only conversations with an email received after their read mark.",
+            "description": "true: only conversations with an email received after their read mark. Limits: 422 invalid_parameter unless true or false.",
             "schema": {
               "type": "boolean"
             }
@@ -7877,6 +8456,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -7896,6 +8478,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -8011,6 +8596,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -8030,6 +8618,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -8111,6 +8702,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -8131,6 +8725,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "422": {
             "description": "invalid_parameter: metadata limits",
             "content": {
@@ -8140,6 +8737,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -8153,7 +8753,7 @@
           }
         },
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -8170,7 +8770,8 @@
                     },
                     "description": "Your own key-value pairs (a ticket id, a CRM deal), replacing the previous ones. Limits: at most 20 keys matching [A-Za-z0-9_-]{1,40}, values up to 500 bytes (UTF-8) (422 invalid_parameter)."
                   }
-                }
+                },
+                "additionalProperties": false
               },
               "example": {
                 "read": true,
@@ -8249,6 +8850,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -8258,6 +8862,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -8301,6 +8908,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "domain_not_verified: verify <name> (or its parent domain) for sending first; inbound reuses that proof of ownership\nrestricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -8321,6 +8931,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "422": {
             "description": "invalid_parameter: invalid domain name\nreserved_domain: this domain is reserved by ZapSMTP; use a managed address or your own domain",
             "content": {
@@ -8330,6 +8943,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "503": {
             "description": "inbound_not_configured: ",
@@ -8353,7 +8969,7 @@
           }
         },
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -8375,7 +8991,8 @@
                     "type": "boolean",
                     "description": "Accept encrypted mail only: senders without STARTTLS are refused with 530 5.7.0."
                   }
-                }
+                },
+                "additionalProperties": false
               },
               "example": {
                 "managed": true
@@ -8436,6 +9053,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -8455,6 +9075,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -8518,6 +9141,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -8538,6 +9164,12 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
           "default": {
             "description": "Error",
             "content": {
@@ -8550,7 +9182,7 @@
           }
         },
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -8564,7 +9196,8 @@
                     "type": "boolean",
                     "description": "Accept encrypted mail only: senders without STARTTLS are refused with 530 5.7.0."
                   }
-                }
+                },
+                "additionalProperties": false
               },
               "example": {
                 "reject_spam": true
@@ -8596,6 +9229,9 @@
           "204": {
             "description": "No content"
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -8615,6 +9251,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -8685,6 +9324,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -8704,6 +9346,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -8766,6 +9411,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -8775,6 +9423,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -8820,6 +9471,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -8830,6 +9484,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "422": {
             "description": "invalid_parameter: validation failures or \"at most 100 routes per account\"",
             "content": {
@@ -8839,6 +9496,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -8912,7 +9572,8 @@
                 },
                 "required": [
                   "action"
-                ]
+                ],
+                "additionalProperties": false
               },
               "example": {
                 "name": "Support tickets",
@@ -8969,6 +9630,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -8988,6 +9652,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -9044,6 +9711,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -9064,6 +9734,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "422": {
             "description": "invalid_parameter: ",
             "content": {
@@ -9073,6 +9746,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -9086,7 +9762,7 @@
           }
         },
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -9143,7 +9819,8 @@
                   "enabled": {
                     "type": "boolean"
                   }
-                }
+                },
+                "additionalProperties": false
               },
               "example": {
                 "enabled": false
@@ -9175,6 +9852,9 @@
           "204": {
             "description": "No content"
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -9194,6 +9874,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -9250,6 +9933,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -9259,6 +9945,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -9298,6 +9987,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -9318,6 +10010,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "422": {
             "description": "invalid_parameter: \"email must be a plain address (name@example.com)\" | \"cannot forward to a ZapSMTP receiving address (it would loop)\"\nlimit_exceeded: at most 20 forward destinations per account",
             "content": {
@@ -9329,7 +10024,7 @@
             }
           },
           "429": {
-            "description": "rate_limit_exceeded: at most 20 forward destinations can be added a day",
+            "description": "rate_limit_exceeded: too many failed authentications from this address; retry in a minute\nrate_limit_exceeded: at most 20 forward destinations can be added a day",
             "content": {
               "application/json": {
                 "schema": {
@@ -9368,12 +10063,14 @@
                 "properties": {
                   "email": {
                     "type": "string",
-                    "description": "A plain address. Not a ZapSMTP receiving address (it would loop)."
+                    "description": "A plain address. Not a ZapSMTP receiving address (it would loop).",
+                    "minLength": 1
                   }
                 },
                 "required": [
                   "email"
-                ]
+                ],
+                "additionalProperties": false
               },
               "example": {
                 "email": "team@acme.com"
@@ -9421,6 +10118,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -9442,7 +10142,7 @@
             }
           },
           "429": {
-            "description": "rate_limit_exceeded: a confirmation email was sent less than a minute ago",
+            "description": "rate_limit_exceeded: too many failed authentications from this address; retry in a minute\nrate_limit_exceeded: a confirmation email was sent less than a minute ago",
             "content": {
               "application/json": {
                 "schema": {
@@ -9510,6 +10210,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -9529,6 +10232,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -9568,6 +10274,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -9577,6 +10286,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "503": {
             "description": "inbound_not_configured: ",
@@ -9615,10 +10327,12 @@
             "name": "limit",
             "in": "query",
             "required": false,
-            "description": "1-1000; out-of-range falls back to 100.",
+            "description": "1-1000. Limits: 422 invalid_parameter otherwise.",
             "schema": {
               "type": "integer",
-              "default": "100"
+              "default": 100,
+              "minimum": 1,
+              "maximum": 1000
             }
           },
           {
@@ -9636,7 +10350,8 @@
             "required": false,
             "description": "Legacy: RFC 3339 timestamp; returns entries created before it. Ignored when after is set. Limits: 422 invalid_parameter \"before must be RFC3339\"",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "date-time"
             }
           }
         ],
@@ -9679,6 +10394,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -9698,6 +10416,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -9734,6 +10455,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -9744,6 +10468,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "422": {
             "description": "invalid_parameter: ",
             "content": {
@@ -9753,6 +10480,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -9774,7 +10504,8 @@
                 "properties": {
                   "email": {
                     "type": "string",
-                    "description": "Address (stored lowercased). Limits: 422 invalid_parameter \"invalid email\""
+                    "description": "Address (stored lowercased). Limits: 422 invalid_parameter \"invalid email\"",
+                    "minLength": 1
                   },
                   "reason": {
                     "type": "string",
@@ -9787,7 +10518,8 @@
                 },
                 "required": [
                   "email"
-                ]
+                ],
+                "additionalProperties": false
               },
               "example": {
                 "email": "former-customer@example.com",
@@ -9835,6 +10567,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "404": {
             "description": "not_found: The address is not suppressed.",
             "content": {
@@ -9844,6 +10579,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -9880,6 +10618,9 @@
           "204": {
             "description": "No content"
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -9899,6 +10640,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -9942,6 +10686,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "test_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -9952,6 +10699,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "422": {
             "description": "invalid_parameter: Empty or over 1,000 addresses, an invalid address, or an unknown reason.",
             "content": {
@@ -9961,6 +10711,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -9998,7 +10751,8 @@
                 },
                 "required": [
                   "emails"
-                ]
+                ],
+                "additionalProperties": false
               },
               "example": {
                 "emails": [
@@ -10039,6 +10793,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "test_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -10049,6 +10806,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "422": {
             "description": "invalid_parameter: Empty or over 1,000 addresses, or an invalid address.",
             "content": {
@@ -10058,6 +10818,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -10087,7 +10850,8 @@
                 },
                 "required": [
                   "emails"
-                ]
+                ],
+                "additionalProperties": false
               },
               "example": {
                 "emails": [
@@ -10114,10 +10878,12 @@
             "name": "hours",
             "in": "query",
             "required": false,
-            "description": "1-720; out-of-range falls back to 24.",
+            "description": "1-720. Limits: 422 invalid_parameter otherwise.",
             "schema": {
               "type": "integer",
-              "default": "24"
+              "default": 24,
+              "minimum": 1,
+              "maximum": 720
             }
           }
         ],
@@ -10149,6 +10915,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -10158,6 +10927,19 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "invalid_parameter: a query parameter is out of range or not one of its values",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -10186,10 +10968,12 @@
             "name": "hours",
             "in": "query",
             "required": false,
-            "description": "1-720; out-of-range falls back to 24. Bucket size: <=1h → 60 s, <=6h → 300 s, <=24h → 1800 s, <=168h → 10800 s, otherwise 43200 s.",
+            "description": "1-720 (422 invalid_parameter otherwise). Bucket size: <=1h → 60 s, <=6h → 300 s, <=24h → 1800 s, <=168h → 10800 s, otherwise 43200 s.",
             "schema": {
               "type": "integer",
-              "default": "24"
+              "default": 24,
+              "minimum": 1,
+              "maximum": 720
             }
           }
         ],
@@ -10221,6 +11005,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -10230,6 +11017,19 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "invalid_parameter: a query parameter is out of range or not one of its values",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -10258,10 +11058,12 @@
             "name": "hours",
             "in": "query",
             "required": false,
-            "description": "1-720; out-of-range falls back to 24.",
+            "description": "1-720. Limits: 422 invalid_parameter otherwise.",
             "schema": {
               "type": "integer",
-              "default": "24"
+              "default": 24,
+              "minimum": 1,
+              "maximum": 720
             }
           }
         ],
@@ -10318,6 +11120,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -10327,6 +11132,19 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "invalid_parameter: a query parameter is out of range or not one of its values",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -10358,7 +11176,7 @@
             "description": "RFC 3339 start. At most 400 days before to.",
             "schema": {
               "type": "string",
-              "default": "7 days ago"
+              "format": "date-time"
             }
           },
           {
@@ -10368,7 +11186,7 @@
             "description": "RFC 3339 end (exclusive).",
             "schema": {
               "type": "string",
-              "default": "now"
+              "format": "date-time"
             }
           },
           {
@@ -10378,7 +11196,10 @@
             "description": "hour (ranges up to 31 days) or day for series.",
             "schema": {
               "type": "string",
-              "default": "hour up to 48 hours, else day"
+              "enum": [
+                "hour",
+                "day"
+              ]
             }
           },
           {
@@ -10387,7 +11208,13 @@
             "required": false,
             "description": "domain, stream, tag or provider: adds groups, one row per value, busiest first.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "domain",
+                "stream",
+                "tag",
+                "provider"
+              ]
             }
           },
           {
@@ -10405,7 +11232,11 @@
             "required": false,
             "description": "transactional or broadcast.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "transactional",
+                "broadcast"
+              ]
             }
           },
           {
@@ -10524,6 +11355,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -10543,6 +11377,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -10604,6 +11441,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -10613,6 +11453,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -10661,6 +11504,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "key_restricted: this API key expires, so the keys it manages must expire no later than it does | this API key is limited to the <stream> stream, and so are the keys it manages\nrestricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -10671,6 +11517,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "422": {
             "description": "invalid_parameter: name, permission, domain_id, mode, stream or expiry invalid",
             "content": {
@@ -10680,6 +11529,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -10701,7 +11553,8 @@
                 "properties": {
                   "name": {
                     "type": "string",
-                    "description": "Limits: 1-100 characters (not trimmed) → 422 invalid_parameter \"name is required (max 100 chars)\""
+                    "description": "Limits: 1-100 characters (not trimmed) → 422 invalid_parameter \"name is required (max 100 chars)\"",
+                    "minLength": 1
                   },
                   "permission": {
                     "type": "string",
@@ -10741,7 +11594,8 @@
                 },
                 "required": [
                   "name"
-                ]
+                ],
+                "additionalProperties": false
               },
               "example": {
                 "name": "checkout-service",
@@ -10796,6 +11650,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "key_restricted: this API key expires, so the keys it manages must expire no later than it does | this API key is limited to the <stream> stream, and so are the keys it manages\ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -10816,6 +11673,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "422": {
             "description": "invalid_parameter: Invalid name, permission or stream; domain_id with full access; unknown domain; \"domain_id must be a string or null\".",
             "content": {
@@ -10825,6 +11685,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -10838,7 +11701,7 @@
           }
         },
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -10877,7 +11740,8 @@
                     ],
                     "description": "Restrict to one stream. null lifts the restriction."
                   }
-                }
+                },
+                "additionalProperties": false
               },
               "example": {
                 "name": "checkout-service",
@@ -10910,6 +11774,9 @@
           "204": {
             "description": "No content"
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -10929,6 +11796,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -10990,6 +11860,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -10999,6 +11872,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -11051,6 +11927,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "plan_limit_reached: the <Plan> plan includes <n> SMTP credentials; upgrade your plan to add more\nplan_limit_reached: the Free plan sends through the Email API; upgrade to Pro to use the SMTP relay\nrestricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -11061,6 +11940,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "422": {
             "description": "invalid_parameter: ",
             "content": {
@@ -11070,6 +11952,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -11091,7 +11976,8 @@
                 "properties": {
                   "name": {
                     "type": "string",
-                    "description": "Limits: trimmed, 1-100 characters → 422 invalid_parameter \"name is required (max 100 chars)\""
+                    "description": "Limits: trimmed, 1-100 characters → 422 invalid_parameter \"name is required (max 100 chars)\"",
+                    "minLength": 1
                   },
                   "domain_id": {
                     "type": "string",
@@ -11100,7 +11986,8 @@
                 },
                 "required": [
                   "name"
-                ]
+                ],
+                "additionalProperties": false
               },
               "example": {
                 "name": "wordpress-shop"
@@ -11134,6 +12021,9 @@
           "204": {
             "description": "No content"
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: \ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
             "content": {
@@ -11153,6 +12043,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -11181,10 +12074,12 @@
             "name": "limit",
             "in": "query",
             "required": false,
-            "description": "1–100.",
+            "description": "1–100. Limits: 422 invalid_parameter otherwise.",
             "schema": {
               "type": "integer",
-              "default": "20"
+              "default": 20,
+              "minimum": 1,
+              "maximum": 100
             }
           },
           {
@@ -11193,7 +12088,8 @@
             "required": false,
             "description": "A log id: return older entries.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           },
           {
@@ -11202,7 +12098,8 @@
             "required": false,
             "description": "A log id: return newer entries.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           },
           {
@@ -11238,7 +12135,8 @@
             "required": false,
             "description": "Only requests made with this key.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -11281,6 +12179,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "422": {
             "description": "invalid_parameter: before or after is not a log id.",
             "content": {
@@ -11290,6 +12191,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -11359,6 +12263,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "404": {
             "description": "not_found: Unknown id, or past your plan’s log retention.",
             "content": {
@@ -11368,6 +12275,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -11415,6 +12325,12 @@
                 }
               }
             }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -11495,6 +12411,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -11504,6 +12423,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -11563,6 +12485,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "403": {
             "description": "restricted_api_key: ",
             "content": {
@@ -11572,6 +12497,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           },
           "default": {
             "description": "Error",
@@ -11638,7 +12566,8 @@
             "const": "list"
           },
           "data": {
-            "type": "array"
+            "type": "array",
+            "items": {}
           },
           "has_more": {
             "type": "boolean"
@@ -11656,7 +12585,8 @@
         "type": "object",
         "properties": {
           "filename": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1
           },
           "content": {
             "type": "string",
@@ -11677,29 +12607,34 @@
         "required": [
           "filename"
         ],
+        "additionalProperties": false,
         "description": "A file to attach: content (base64) or path (an http(s) URL ZapSMTP fetches), not both."
       },
       "Tag": {
         "type": "object",
         "properties": {
           "name": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1
           },
           "value": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1
           }
         },
         "required": [
           "name",
           "value"
         ],
+        "additionalProperties": false,
         "description": "A name and value returned in webhooks as data.tags."
       },
       "TemplateRef": {
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1
           },
           "variables": {
             "type": "object",
@@ -11709,6 +12644,7 @@
         "required": [
           "id"
         ],
+        "additionalProperties": false,
         "description": "A published template to render: id is its id or alias."
       },
       "Tracking": {
@@ -11724,6 +12660,7 @@
             "type": "boolean"
           }
         },
+        "additionalProperties": false,
         "description": "Overrides the From domain's tracking defaults for this email."
       },
       "WebhookFilter": {
@@ -11736,13 +12673,15 @@
             }
           }
         },
+        "additionalProperties": false,
         "description": "Narrows email.clicked to some click actions."
       },
       "VariableSpec": {
         "type": "object",
         "properties": {
           "name": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1
           },
           "type": {
             "type": "string",
@@ -11770,6 +12709,7 @@
           "name",
           "type"
         ],
+        "additionalProperties": false,
         "description": "One declared template variable."
       },
       "SendEmailParams": {
@@ -11782,12 +12722,15 @@
           "to": {
             "oneOf": [
               {
-                "type": "string"
+                "type": "string",
+                "minLength": 1
               },
               {
                 "type": "array",
+                "minItems": 1,
                 "items": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             ],
@@ -11911,6 +12854,7 @@
         "required": [
           "to"
         ],
+        "additionalProperties": false,
         "description": "An email to send."
       },
       "Action": {
@@ -14250,6 +15194,12 @@
       "SendBatchResponseData": {
         "type": "object",
         "properties": {
+          "failed_recipients": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "id": {
             "type": "string"
           },
@@ -14990,9 +15940,7 @@
           },
           "variables": {
             "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            }
+            "additionalProperties": {}
           }
         },
         "required": [
@@ -15268,7 +16216,10 @@
             "type": "integer"
           },
           "last_inbound_at": {
-            "type": "string",
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "date-time"
           },
           "last_message": {
@@ -15774,6 +16725,38 @@
           "event_type",
           "status_code"
         ]
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "missing_api_key: no Authorization: Bearer header\ninvalid_api_key: the key is unknown, revoked or expired",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "rate_limit_exceeded: too many failed authentications from this address; retry in a minute",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "PayloadTooLarge": {
+        "description": "payload_too_large: the request body is over the operation's size limit",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
       }
     }
   }
