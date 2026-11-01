@@ -73,7 +73,7 @@
       "description": "Use separate keys per application and environment. Test keys (zap_test_…) run the full pipeline without delivering. SMTP credentials have their own username and password and never authorize the HTTP API."
     },
     {
-      "name": "Logs & usage",
+      "name": "Logs, usage & account",
       "description": "Find out exactly what your code sent and what we answered. Every response’s X-Request-Id is the id of its log entry."
     },
     {
@@ -12066,7 +12066,7 @@
         "summary": "List logs",
         "description": "List the API requests made with your keys, newest first. Bodies are on Retrieve a log. Entries appear within seconds and are kept for your plan’s log retention. Requires a full-access key. Requests made with API keys are logged; the dashboard’s own calls are not. The X-Request-Id header of every response is the id of its log entry.",
         "tags": [
-          "Logs & usage"
+          "Logs, usage & account"
         ],
         "x-sdk-method": "logs.list",
         "parameters": [
@@ -12214,7 +12214,7 @@
         "summary": "Retrieve a log",
         "description": "Retrieve one request with its request and response bodies. Bodies are capped at 16 KB; API keys, passwords and signing secrets are always replaced with [redacted]. Requires a full-access key.",
         "tags": [
-          "Logs & usage"
+          "Logs, usage & account"
         ],
         "x-sdk-method": "logs.get",
         "parameters": [
@@ -12298,7 +12298,7 @@
         "summary": "Retrieve usage",
         "description": "This month’s sending against your plan: emails sent, included volume, limit, overage and, on the Free plan, today’s count. Requires a full-access key. limit is null on paid plans without a spending cap: email keeps flowing and extra volume is billed. The Free plan adds daily_limit and sent_today.",
         "tags": [
-          "Logs & usage"
+          "Logs, usage & account"
         ],
         "x-sdk-method": "usage.get",
         "responses": {
@@ -12339,6 +12339,227 @@
                 "schema": {
                   "$ref": "#/components/schemas/Error"
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/account": {
+      "get": {
+        "operationId": "get-account",
+        "summary": "Retrieve the account",
+        "description": "The account the key belongs to: its name, status and sending rate limit, the plan with its limits, this month’s sent count and the SMTP relay settings. Requires a full-access key. spend_cap_cents is null without a spending cap. For the month’s overage and limit use GET /usage. Plan changes and payments are made in the dashboard, never with an API key.",
+        "tags": [
+          "Logs, usage & account"
+        ],
+        "x-sdk-method": "account.get",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountInfo"
+                },
+                "example": {
+                  "object": "account",
+                  "account": {
+                    "id": "019a1f31-5b2e-7c9d-8e4f-1a2b3c4d5e6f",
+                    "name": "Acme",
+                    "plan": "pro_50k",
+                    "status": "active",
+                    "rate_limit_per_sec": 50,
+                    "monthly_quota": 50000,
+                    "created_at": "2026-09-01T10:00:00Z",
+                    "spend_cap_cents": null,
+                    "subscription_status": "active",
+                    "current_period_end": "2026-11-30T23:59:59Z",
+                    "dedicated_ips": 0
+                  },
+                  "plan": {
+                    "id": "pro_50k",
+                    "name": "Pro 50k",
+                    "tier": "pro",
+                    "included_emails": 50000,
+                    "daily_emails": 0,
+                    "price_cents": 1500,
+                    "overage_cents_per_1000": 90,
+                    "max_domains": 10,
+                    "max_smtp_credentials": 10,
+                    "smtp_relay": true,
+                    "retention_days": 30
+                  },
+                  "usage": {
+                    "month": "2026-11",
+                    "sent": 12480,
+                    "monthly_quota": 50000
+                  },
+                  "smtp": {
+                    "host": "mail.zapsmtp.com",
+                    "ports": [
+                      587,
+                      465,
+                      2525
+                    ],
+                    "username": "zapsmtp",
+                    "password": "<your API key>"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "restricted_api_key: this API key only has sending access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "update-account",
+        "summary": "Rename the account",
+        "description": "Rename the account. Answers the account as GET /account does. Requires a full-access live key; test keys get 403 test_key_restricted.",
+        "tags": [
+          "Logs, usage & account"
+        ],
+        "x-sdk-method": "account.update",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountInfo"
+                },
+                "example": {
+                  "object": "account",
+                  "account": {
+                    "id": "019a1f31-5b2e-7c9d-8e4f-1a2b3c4d5e6f",
+                    "name": "Acme",
+                    "plan": "pro_50k",
+                    "status": "active",
+                    "rate_limit_per_sec": 50,
+                    "monthly_quota": 50000,
+                    "created_at": "2026-09-01T10:00:00Z",
+                    "spend_cap_cents": null,
+                    "subscription_status": "active",
+                    "current_period_end": "2026-11-30T23:59:59Z",
+                    "dedicated_ips": 0
+                  },
+                  "plan": {
+                    "id": "pro_50k",
+                    "name": "Pro 50k",
+                    "tier": "pro",
+                    "included_emails": 50000,
+                    "daily_emails": 0,
+                    "price_cents": 1500,
+                    "overage_cents_per_1000": 90,
+                    "max_domains": 10,
+                    "max_smtp_credentials": 10,
+                    "smtp_relay": true,
+                    "retention_days": 30
+                  },
+                  "usage": {
+                    "month": "2026-11",
+                    "sent": 12480,
+                    "monthly_quota": 50000
+                  },
+                  "smtp": {
+                    "host": "mail.zapsmtp.com",
+                    "ports": [
+                      587,
+                      465,
+                      2525
+                    ],
+                    "username": "zapsmtp",
+                    "password": "<your API key>"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "restricted_api_key: this API key only has sending access\ntest_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "422": {
+            "description": "invalid_parameter: name is required (max 100 chars)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "1–100 characters.",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false
+              },
+              "example": {
+                "name": "Acme"
               }
             }
           }
@@ -12856,6 +13077,186 @@
         ],
         "additionalProperties": false,
         "description": "An email to send."
+      },
+      "AccountInfo": {
+        "type": "object",
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/AccountProfile"
+          },
+          "object": {
+            "type": "string"
+          },
+          "plan": {
+            "$ref": "#/components/schemas/AccountPlan"
+          },
+          "smtp": {
+            "$ref": "#/components/schemas/AccountSmtp"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/AccountUsage"
+          }
+        },
+        "required": [
+          "account",
+          "plan",
+          "smtp",
+          "usage"
+        ]
+      },
+      "AccountPlan": {
+        "type": "object",
+        "properties": {
+          "daily_emails": {
+            "type": "integer"
+          },
+          "id": {
+            "type": "string"
+          },
+          "included_emails": {
+            "type": "integer"
+          },
+          "max_domains": {
+            "type": "integer"
+          },
+          "max_smtp_credentials": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "overage_cents_per_1000": {
+            "type": "integer"
+          },
+          "price_cents": {
+            "type": "integer"
+          },
+          "retention_days": {
+            "type": "integer"
+          },
+          "smtp_relay": {
+            "type": "boolean"
+          },
+          "tier": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "daily_emails",
+          "id",
+          "included_emails",
+          "max_domains",
+          "max_smtp_credentials",
+          "name",
+          "overage_cents_per_1000",
+          "price_cents",
+          "retention_days",
+          "tier"
+        ]
+      },
+      "AccountProfile": {
+        "type": "object",
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "current_period_end": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "dedicated_ips": {
+            "type": "integer"
+          },
+          "id": {
+            "type": "string"
+          },
+          "monthly_quota": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "plan": {
+            "type": "string"
+          },
+          "rate_limit_per_sec": {
+            "type": "number"
+          },
+          "spend_cap_cents": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "subscription_status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at",
+          "current_period_end",
+          "dedicated_ips",
+          "id",
+          "monthly_quota",
+          "name",
+          "plan",
+          "rate_limit_per_sec",
+          "spend_cap_cents",
+          "status",
+          "subscription_status"
+        ]
+      },
+      "AccountSmtp": {
+        "type": "object",
+        "properties": {
+          "host": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "ports": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "host",
+          "password",
+          "ports",
+          "username"
+        ]
+      },
+      "AccountUsage": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string"
+          },
+          "monthly_quota": {
+            "type": "integer"
+          },
+          "sent": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "month",
+          "monthly_quota",
+          "sent"
+        ]
       },
       "Action": {
         "type": "object",
