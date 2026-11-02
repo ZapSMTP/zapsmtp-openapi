@@ -130,7 +130,7 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "domain_not_verified: sender domain is not verified for this account\nrestricted_api_key: key restricted to another domain or stream\naccount_suspended: account is suspended",
+            "description": "domain_not_verified: sender domain is not verified for this account\nrestricted_api_key: key restricted to another domain or stream\naccount_suspended: account is suspended\naccount_closing: account is scheduled for deletion (an owner can cancel it in the dashboard)",
             "content": {
               "application/json": {
                 "schema": {
@@ -3015,7 +3015,8 @@
                   "include_content": false,
                   "batch": false,
                   "filter": {
-                    "actions": []
+                    "actions": [],
+                    "domains": []
                   }
                 }
               }
@@ -3094,7 +3095,7 @@
                         "$ref": "#/components/schemas/WebhookFilter"
                       }
                     ],
-                    "description": "Narrows email.clicked to some click actions; other event types are not affected. Empty or absent: every click."
+                    "description": "Narrows what the endpoint receives: actions narrows email.clicked (and email.clicked_unique) to some click actions; domains narrows every event to some domains. Empty or absent: every click, every domain."
                   }
                 },
                 "required": [
@@ -3157,7 +3158,8 @@
                   "disabled_reason": null,
                   "created_at": "2026-10-20T12:00:00Z",
                   "filter": {
-                    "actions": []
+                    "actions": [],
+                    "domains": []
                   }
                 }
               }
@@ -3238,7 +3240,8 @@
                   "disabled_reason": null,
                   "created_at": "2026-10-20T12:00:00Z",
                   "filter": {
-                    "actions": []
+                    "actions": [],
+                    "domains": []
                   }
                 }
               }
@@ -3330,7 +3333,7 @@
                         "$ref": "#/components/schemas/WebhookFilter"
                       }
                     ],
-                    "description": "Narrows email.clicked to some click actions; other event types are not affected. Empty or absent: every click. Replaces the whole filter; {\"actions\": []} removes it."
+                    "description": "Narrows what the endpoint receives: actions narrows email.clicked (and email.clicked_unique) to some click actions; domains narrows every event to some domains. Empty or absent: every click, every domain. A list you leave out keeps its value; an empty list clears it: {\"actions\": []} lets every click through, {\"domains\": []} every domain."
                   }
                 },
                 "additionalProperties": false
@@ -3548,7 +3551,18 @@
                       "email.received",
                       "thread.created",
                       "thread.replied",
-                      "email.replied"
+                      "email.replied",
+                      "email.opened_unique",
+                      "email.clicked_unique",
+                      "email.unsubscribed",
+                      "email.forward_failed",
+                      "domain.verified",
+                      "domain.reputation_changed",
+                      "email.scheduled",
+                      "suppression.added",
+                      "suppression.removed",
+                      "domain.created",
+                      "domain.deleted"
                     ],
                     "description": "Limits: 422 invalid_parameter \"unknown event type\""
                   }
@@ -12896,10 +12910,16 @@
             "items": {
               "type": "string"
             }
+          },
+          "domains": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "additionalProperties": false,
-        "description": "Narrows email.clicked to some click actions."
+        "description": "Narrows what an endpoint receives: email.clicked (and email.clicked_unique) to some click actions, every event to some domains."
       },
       "VariableSpec": {
         "type": "object",
