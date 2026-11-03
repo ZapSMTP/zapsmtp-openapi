@@ -65,6 +65,14 @@
       "description": "Permanent mailbox or domain failures, complaints and one-click unsubscribes add an address here automatically. Sends to a suppressed address are skipped and reported as email.suppressed. An unsubscribe stops only broadcast email; transactional email to that address still goes out."
     },
     {
+      "name": "Email validation",
+      "description": "A validation never sends anything to the address. It checks the syntax, the domain and its mail servers, throw-away mailbox services, role addresses (info@, support@), likely typos, your suppression list and hard bounces on ZapSMTP in the last 180 days, and returns deliverable, risky, undeliverable or unknown with the reasons."
+    },
+    {
+      "name": "Inbox placement",
+      "description": "A placement test sends your message to seed mailboxes at the big providers (or hands you their addresses to send to yourself) and reads each one to see where the copy landed, with the provider’s own SPF, DKIM and DMARC verdict."
+    },
+    {
       "name": "Statistics",
       "description": "Counts for the window you ask for, limited to your plan’s log retention."
     },
@@ -10882,6 +10890,715 @@
         }
       }
     },
+    "/email-validations": {
+      "post": {
+        "operationId": "validate-email",
+        "summary": "Validate an address",
+        "description": "Check one address before you send to it: syntax, the domain and its mail servers, throw-away and role addresses, typos, your suppression list and earlier hard bounces. Any API key; test keys too (nothing is sent or changed). result: deliverable (every check passed), risky (it may arrive, but sending to it can hurt your reputation), undeliverable (it will bounce) or unknown (the domain's DNS did not answer: try again later). reason is the most serious of reasons: invalid_syntax, reserved_domain, domain_not_found, no_mail_server, mailbox_not_found, previously_bounced (hard bounced on ZapSMTP in the last 180 days), dns_error, suppressed (on your suppression list), disposable, accept_all, role_address; ok when there is none. checks.mailbox is exists, not_found, unknown or not_checked. Nothing is ever sent to the address. did_you_mean suggests a likely intended address when the domain looks like a typo. Each address counts against your plan's monthly validations (Free 100, Pro 5,000, Scale 25,000); over it: 429 monthly_quota_exceeded. Results are not stored.",
+        "tags": [
+          "Email validation"
+        ],
+        "x-sdk-method": "emailValidations.create",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailValidation"
+                },
+                "example": {
+                  "object": "email_validation",
+                  "email": "ann@example.com",
+                  "normalized": "ann@example.com",
+                  "result": "deliverable",
+                  "reason": "ok",
+                  "reasons": [],
+                  "score": 0.9,
+                  "did_you_mean": null,
+                  "checks": {
+                    "syntax": true,
+                    "domain": "example.com",
+                    "mx": [
+                      "mx1.example.com",
+                      "mx2.example.com"
+                    ],
+                    "disposable": false,
+                    "role": false,
+                    "free": false,
+                    "mailbox": "not_checked",
+                    "accept_all": null,
+                    "suppressed": false,
+                    "previously_bounced": false
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "422": {
+            "description": "missing_required_field: email is required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limit_exceeded: too many failed authentications from this address; retry in a minute\nmonthly_quota_exceeded: this month's validations of the plan are used up\nrate_limit_exceeded: email validation is limited to 120 requests per minute",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "description": "The address to check.",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "email"
+                ],
+                "additionalProperties": false
+              },
+              "example": {
+                "email": "ann@example.com"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/email-validations/batch": {
+      "post": {
+        "operationId": "validate-emails",
+        "summary": "Validate up to 100 addresses",
+        "description": "Check up to 100 addresses in one call; results come back in the order given. Any API key; test keys too (nothing is sent or changed). Each address counts against the plan's monthly validations; a batch that would pass the allowance is refused whole.",
+        "tags": [
+          "Email validation"
+        ],
+        "x-sdk-method": "emailValidations.createBatch",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailValidationList"
+                },
+                "example": {
+                  "object": "list",
+                  "data": [
+                    {
+                      "object": "email_validation",
+                      "email": "ann@example.com",
+                      "normalized": "ann@example.com",
+                      "result": "deliverable",
+                      "reason": "ok",
+                      "reasons": [],
+                      "score": 0.9,
+                      "did_you_mean": null,
+                      "checks": {
+                        "syntax": true,
+                        "domain": "example.com",
+                        "mx": [
+                          "mx1.example.com",
+                          "mx2.example.com"
+                        ],
+                        "disposable": false,
+                        "role": false,
+                        "free": false,
+                        "mailbox": "not_checked",
+                        "accept_all": null,
+                        "suppressed": false,
+                        "previously_bounced": false
+                      }
+                    },
+                    {
+                      "object": "email_validation",
+                      "email": "info@gmial.com",
+                      "normalized": "info@gmial.com",
+                      "result": "undeliverable",
+                      "reason": "domain_not_found",
+                      "reasons": [
+                        "domain_not_found",
+                        "role_address"
+                      ],
+                      "score": 0,
+                      "did_you_mean": "info@gmail.com",
+                      "checks": {
+                        "syntax": true,
+                        "domain": "gmial.com",
+                        "mx": [],
+                        "disposable": false,
+                        "role": true,
+                        "free": false,
+                        "mailbox": "not_checked",
+                        "accept_all": null,
+                        "suppressed": false,
+                        "previously_bounced": false
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "422": {
+            "description": "invalid_parameter: Empty, over 100 addresses, or an empty or over-long one.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limit_exceeded: too many failed authentications from this address; retry in a minute\nmonthly_quota_exceeded: this month's validations of the plan are used up\nrate_limit_exceeded: email validation is limited to 120 requests per minute",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "emails": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "1–100 addresses, each at most 320 characters."
+                  }
+                },
+                "required": [
+                  "emails"
+                ],
+                "additionalProperties": false
+              },
+              "example": {
+                "emails": [
+                  "ann@example.com",
+                  "info@gmial.com"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/placement-tests": {
+      "post": {
+        "operationId": "create-placement-test",
+        "summary": "Start a placement test",
+        "description": "Start an inbox placement test: see whether a message lands in the inbox, a Gmail tab or spam at the big mailbox providers. Requires a full-access live key; test keys get 403 test_key_restricted. With a message (from and content, or a template) one copy goes to each seed mailbox through your account, like any send (each counts as a sent email; test keys cannot). Without one the test is manual: send your message to every address in results from anywhere, with token in the subject or text, within 2 hours. ZapSMTP then reads each seed mailbox (Gmail, Outlook, Yahoo and others) and records where the copy landed: inbox, a Gmail tab (promotions, social, updates, forums), spam, or missing once the test ends (15 minutes after a send). auth is the provider's own SPF, DKIM and DMARC verdict. status is running until every seed has an answer or the test ends, then done. summary.inbox_rate = inbox (any tab) / seeds with an answer. Your plan includes a number of tests a month (Free 1, Pro 10, Scale 50); over it: 429 monthly_quota_exceeded.",
+        "tags": [
+          "Inbox placement"
+        ],
+        "x-sdk-method": "placementTests.create",
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlacementTest"
+                },
+                "example": {
+                  "object": "placement_test",
+                  "id": "019a2b10-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+                  "mode": "send",
+                  "token": "zp-4f9k2m8q1x7c3v5b",
+                  "from": "News <news@example.com>",
+                  "subject": "November offers",
+                  "status": "running",
+                  "created_at": "2026-11-02T10:00:00Z",
+                  "ends_at": "2026-11-02T10:15:00Z",
+                  "finished_at": null,
+                  "results": [
+                    {
+                      "provider": "gmail",
+                      "address": "seed1@gmail.com",
+                      "email_id": "019a2b10-5c6d-7e8f-9a0b-1c2d3e4f5a6b",
+                      "placement": null,
+                      "folder": null,
+                      "received_at": null,
+                      "auth": null
+                    },
+                    {
+                      "provider": "outlook",
+                      "address": "seed1@outlook.com",
+                      "email_id": "019a2b10-5c6d-7e8f-9a0b-1c2d3e4f5a6b",
+                      "placement": null,
+                      "folder": null,
+                      "received_at": null,
+                      "auth": null
+                    },
+                    {
+                      "provider": "yahoo",
+                      "address": "seed1@yahoo.com",
+                      "email_id": "019a2b10-5c6d-7e8f-9a0b-1c2d3e4f5a6b",
+                      "placement": null,
+                      "folder": null,
+                      "received_at": null,
+                      "auth": null
+                    }
+                  ],
+                  "summary": {
+                    "total": 3,
+                    "inbox": 0,
+                    "primary": 0,
+                    "promotions": 0,
+                    "social": 0,
+                    "updates": 0,
+                    "forums": 0,
+                    "spam": 0,
+                    "missing": 0,
+                    "pending": 3,
+                    "inbox_rate": 0
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "test_key_restricted: test-mode keys can send test email and read, not change the account: use a live key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "429": {
+            "description": "rate_limit_exceeded: too many failed authentications from this address; retry in a minute\nmonthly_quota_exceeded: this month's inbox placement tests of the plan are used up",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "service_unavailable: no seed mailboxes are configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "from": {
+                    "type": "string",
+                    "description": "Sender on one of your verified domains. Leave out (with template) for a manual test."
+                  },
+                  "subject": {
+                    "type": "string",
+                    "description": "As in Send an email."
+                  },
+                  "html": {
+                    "type": "string",
+                    "description": "As in Send an email."
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "As in Send an email."
+                  },
+                  "template": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/TemplateRef"
+                      }
+                    ],
+                    "description": "A stored template and its variables, as in Send an email."
+                  },
+                  "headers": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Extra headers, as in Send an email."
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Tag"
+                    },
+                    "description": "As in Send an email."
+                  },
+                  "stream": {
+                    "type": "string",
+                    "description": "As in Send an email."
+                  }
+                },
+                "additionalProperties": false
+              },
+              "example": {
+                "from": "News <news@example.com>",
+                "subject": "November offers",
+                "html": "<p>Our November offers</p>"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "list-placement-tests",
+        "summary": "List placement tests",
+        "description": "List placement tests, newest first, with cursor pagination. Requires a full-access key. Pass next_cursor as after for the next page.",
+        "tags": [
+          "Inbox placement"
+        ],
+        "x-sdk-method": "placementTests.list",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "1-100. Limits: 422 invalid_parameter otherwise.",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "description": "A test id from next_cursor. Limits: 422 invalid_parameter otherwise.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/List",
+                  "unevaluatedProperties": true,
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PlacementTest"
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "object": "list",
+                  "has_more": false,
+                  "data": [
+                    {
+                      "object": "placement_test",
+                      "id": "019a2b10-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+                      "mode": "send",
+                      "token": "zp-4f9k2m8q1x7c3v5b",
+                      "from": "News <news@example.com>",
+                      "subject": "November offers",
+                      "status": "done",
+                      "created_at": "2026-11-02T10:00:00Z",
+                      "ends_at": "2026-11-02T10:15:00Z",
+                      "finished_at": "2026-11-02T10:02:30Z",
+                      "results": [
+                        {
+                          "provider": "gmail",
+                          "address": "seed1@gmail.com",
+                          "email_id": "019a2b10-5c6d-7e8f-9a0b-1c2d3e4f5a6b",
+                          "placement": "promotions",
+                          "folder": "INBOX",
+                          "received_at": "2026-11-02T10:00:41Z",
+                          "auth": {
+                            "spf": "pass",
+                            "dkim": "pass",
+                            "dmarc": "pass"
+                          }
+                        },
+                        {
+                          "provider": "outlook",
+                          "address": "seed1@outlook.com",
+                          "email_id": "019a2b10-5c6d-7e8f-9a0b-1c2d3e4f5a6b",
+                          "placement": "inbox",
+                          "folder": "INBOX",
+                          "received_at": "2026-11-02T10:00:41Z",
+                          "auth": {
+                            "spf": "pass",
+                            "dkim": "pass",
+                            "dmarc": "pass"
+                          }
+                        },
+                        {
+                          "provider": "yahoo",
+                          "address": "seed1@yahoo.com",
+                          "email_id": "019a2b10-5c6d-7e8f-9a0b-1c2d3e4f5a6b",
+                          "placement": "spam",
+                          "folder": "Bulk",
+                          "received_at": "2026-11-02T10:00:41Z",
+                          "auth": {
+                            "spf": "pass",
+                            "dkim": "pass",
+                            "dmarc": "pass"
+                          }
+                        }
+                      ],
+                      "summary": {
+                        "total": 3,
+                        "inbox": 2,
+                        "primary": 1,
+                        "promotions": 1,
+                        "social": 0,
+                        "updates": 0,
+                        "forums": 0,
+                        "spam": 1,
+                        "missing": 0,
+                        "pending": 0,
+                        "inbox_rate": 0.666
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "422": {
+            "description": "invalid_parameter: ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/placement-tests/{id}": {
+      "get": {
+        "operationId": "get-placement-test",
+        "summary": "Retrieve a placement test",
+        "description": "Retrieve a placement test with where each copy landed. Requires a full-access key. ZapSMTP then reads each seed mailbox (Gmail, Outlook, Yahoo and others) and records where the copy landed: inbox, a Gmail tab (promotions, social, updates, forums), spam, or missing once the test ends (15 minutes after a send). auth is the provider's own SPF, DKIM and DMARC verdict. status is running until every seed has an answer or the test ends, then done. summary.inbox_rate = inbox (any tab) / seeds with an answer.",
+        "tags": [
+          "Inbox placement"
+        ],
+        "x-sdk-method": "placementTests.get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The test id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlacementTest"
+                },
+                "example": {
+                  "object": "placement_test",
+                  "id": "019a2b10-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+                  "mode": "send",
+                  "token": "zp-4f9k2m8q1x7c3v5b",
+                  "from": "News <news@example.com>",
+                  "subject": "November offers",
+                  "status": "done",
+                  "created_at": "2026-11-02T10:00:00Z",
+                  "ends_at": "2026-11-02T10:15:00Z",
+                  "finished_at": "2026-11-02T10:02:30Z",
+                  "results": [
+                    {
+                      "provider": "gmail",
+                      "address": "seed1@gmail.com",
+                      "email_id": "019a2b10-5c6d-7e8f-9a0b-1c2d3e4f5a6b",
+                      "placement": "promotions",
+                      "folder": "INBOX",
+                      "received_at": "2026-11-02T10:00:41Z",
+                      "auth": {
+                        "spf": "pass",
+                        "dkim": "pass",
+                        "dmarc": "pass"
+                      }
+                    },
+                    {
+                      "provider": "outlook",
+                      "address": "seed1@outlook.com",
+                      "email_id": "019a2b10-5c6d-7e8f-9a0b-1c2d3e4f5a6b",
+                      "placement": "inbox",
+                      "folder": "INBOX",
+                      "received_at": "2026-11-02T10:00:41Z",
+                      "auth": {
+                        "spf": "pass",
+                        "dkim": "pass",
+                        "dmarc": "pass"
+                      }
+                    },
+                    {
+                      "provider": "yahoo",
+                      "address": "seed1@yahoo.com",
+                      "email_id": "019a2b10-5c6d-7e8f-9a0b-1c2d3e4f5a6b",
+                      "placement": "spam",
+                      "folder": "Bulk",
+                      "received_at": "2026-11-02T10:00:41Z",
+                      "auth": {
+                        "spf": "pass",
+                        "dkim": "pass",
+                        "dmarc": "pass"
+                      }
+                    }
+                  ],
+                  "summary": {
+                    "total": 3,
+                    "inbox": 2,
+                    "primary": 1,
+                    "promotions": 1,
+                    "social": 0,
+                    "updates": 0,
+                    "forums": 0,
+                    "spam": 1,
+                    "missing": 0,
+                    "pending": 0,
+                    "inbox_rate": 0.666
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "not_found: placement test not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/stats": {
       "get": {
         "operationId": "stats",
@@ -14627,6 +15344,126 @@
           "url"
         ]
       },
+      "EmailValidation": {
+        "type": "object",
+        "properties": {
+          "checks": {
+            "$ref": "#/components/schemas/EmailValidationChecks"
+          },
+          "did_you_mean": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "email": {
+            "type": "string"
+          },
+          "normalized": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "result": {
+            "type": "string"
+          },
+          "score": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "checks",
+          "did_you_mean",
+          "email",
+          "normalized",
+          "object",
+          "reason",
+          "reasons",
+          "result",
+          "score"
+        ]
+      },
+      "EmailValidationChecks": {
+        "type": "object",
+        "properties": {
+          "accept_all": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "disposable": {
+            "type": "boolean"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "free": {
+            "type": "boolean"
+          },
+          "mailbox": {
+            "type": "string"
+          },
+          "mx": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "previously_bounced": {
+            "type": "boolean"
+          },
+          "role": {
+            "type": "boolean"
+          },
+          "suppressed": {
+            "type": "boolean"
+          },
+          "syntax": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "accept_all",
+          "disposable",
+          "domain",
+          "free",
+          "mailbox",
+          "mx",
+          "previously_bounced",
+          "role",
+          "suppressed",
+          "syntax"
+        ]
+      },
+      "EmailValidationList": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmailValidation"
+            }
+          },
+          "object": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "object"
+        ]
+      },
       "ForwardDestination": {
         "type": "object",
         "properties": {
@@ -15253,6 +16090,201 @@
           "opened",
           "sent",
           "suppressed"
+        ]
+      },
+      "PlacementAuth": {
+        "type": "object",
+        "properties": {
+          "dkim": {
+            "type": "string"
+          },
+          "dmarc": {
+            "type": "string"
+          },
+          "spf": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "dkim",
+          "dmarc",
+          "spf"
+        ]
+      },
+      "PlacementResult": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "auth": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlacementAuth"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "email_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "folder": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "placement": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "provider": {
+            "type": "string"
+          },
+          "received_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "address",
+          "auth",
+          "email_id",
+          "folder",
+          "placement",
+          "provider",
+          "received_at"
+        ]
+      },
+      "PlacementSummary": {
+        "type": "object",
+        "properties": {
+          "forums": {
+            "type": "integer"
+          },
+          "inbox": {
+            "type": "integer"
+          },
+          "inbox_rate": {
+            "type": "number"
+          },
+          "missing": {
+            "type": "integer"
+          },
+          "pending": {
+            "type": "integer"
+          },
+          "primary": {
+            "type": "integer"
+          },
+          "promotions": {
+            "type": "integer"
+          },
+          "social": {
+            "type": "integer"
+          },
+          "spam": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "updates": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "forums",
+          "inbox",
+          "inbox_rate",
+          "missing",
+          "pending",
+          "primary",
+          "promotions",
+          "social",
+          "spam",
+          "total",
+          "updates"
+        ]
+      },
+      "PlacementTest": {
+        "type": "object",
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ends_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finished_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "from": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlacementResult"
+            }
+          },
+          "status": {
+            "type": "string"
+          },
+          "subject": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "summary": {
+            "$ref": "#/components/schemas/PlacementSummary"
+          },
+          "token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at",
+          "ends_at",
+          "finished_at",
+          "from",
+          "id",
+          "mode",
+          "object",
+          "results",
+          "status",
+          "subject",
+          "summary",
+          "token"
         ]
       },
       "ReceivedEmail": {
